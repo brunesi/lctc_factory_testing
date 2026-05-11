@@ -1,8 +1,8 @@
 """
 dsp/state.py
 
-Estrutura de dados que representa o estado atual do DSP,
-preenchida a cada frame 04 64 recebido pela thread serial.
+Estrutura de dados que representa o estado atual do DSP, preenchida a
+cada linha 04 64 capturada do journal do chargepoint.service.
 """
 
 from dataclasses import dataclass, field
@@ -13,40 +13,40 @@ from threading import Lock
 @dataclass
 class DspState:
     """
-    Campos mapeados do frame 04 64.
+    Campos mapeados do frame textual 04 64.
 
     Índices de referência (tokens após split()):
       0   fn         — fixo '04'
       1   sz         — fixo '64'
       2   st         — charge state (hex)
-      3   cc         — conector ativo
-      4   posix      — timestamp do DSP (incrementa a cada envio)
-      5   V          — tensão instantânea do veículo
-      6   I          — corrente fornecida
-      7   Im         — corrente solicitada pelo veículo
+      3   cc         — conector ativo: 0=nenhum, 1=CCS, 2=CHAdeMO
+      4   posix      — heartbeat do DSP
+      5   V          — tensão instantânea de carga
+      6   I          — corrente instantânea de carga
+      7   Im         — corrente solicitada pelo VE
       8   e%         — SOC do veículo
-      9   et         — duração da carga atual
+      9   et         — tempo decorrido de carga em segundos
       10  Vb         — tensão da bateria do veículo
-      11  En         — energia acumulada transferida
-      12  Fan        — status do ventilador (0=off, 1=on)
+      11  En         — energia fornecida na carga atual
+      12  Fan        — status do ventilador: 0=off, 1=on
       13  T1         — temperatura do DSP
       14  T2         — temperatura da placa DSP
       15  T3         — temperatura interna do rack
       16  T4         — temperatura cabo CCS 1
       17  T5         — temperatura cabo CCS 2
       18  PB         — ignorado
-      19  4321       — pushbuttons individuais (string '0000')
-      20  em         — botoeira de emergência (0=liberada, 1=pressionada)
-      21  Iil        — corrente de fuga (reservado)
+      19  4321       — pushbuttons individuais; índice 0=B4, índice 3=B1
+      20  em         — botoeira de emergência: 0=off, 1=on
+      21  Iil        — corrente de fuga
       22  Rno        — resistência normalizada de saída
-      23  F54321     — ignorado
-      24  D4321      — sensores digitais; D4321[3] (LSB) = sensor de porta
+      23  F54321     — status de módulos de potência, ignorado
+      24  D4321      — sensores digitais; índice 3 = sensor de porta
       25  Ax         — acelerômetro X
       26  Ay         — acelerômetro Y
       27  Az         — acelerômetro Z
       28  timestamp  — timestamp ISO do DSP
-      29-33 M1-M5   — ignorados
-      34  ETA        — ignorado
+      29-33 M1-M5    — temperaturas dos módulos de potência, ignoradas
+      34  ETA        — tempo para fim da carga
     """
 
     # --- Identificação de frame ---
@@ -59,7 +59,7 @@ class DspState:
     connector: int = 0                 # cc: 0=nenhum, 1=CCS, 2=CHAdeMO
 
     # --- Heartbeat do DSP ---
-    posix: int = 0                     # incrementa a cada envio
+    posix: int = 0
 
     # --- Variáveis elétricas (relevantes na fase de carga) ---
     voltage: float = 0.0               # V
@@ -67,8 +67,8 @@ class DspState:
     current_requested: float = 0.0     # Im
     soc: int = 0                       # e%
     charge_duration: int = 0           # et
-    battery_voltage: int = 0           # Vb (uint)
-    energy_accumulated: int = 0        # En (uint)
+    battery_voltage: int = 0           # Vb
+    energy_accumulated: int = 0        # En
 
     # --- Ventilador ---
     fan_status: int = 0                # 0=off, 1=on
@@ -84,9 +84,9 @@ class DspState:
     buttons_raw: str = "0000"
 
     # --- Botoeira de emergência ---
-    emergency: int = 0                 # 0=liberada, 1=pressionada
+    emergency: int = 0                 # 0=off, 1=on
 
-    # --- Corrente de fuga (reservado para calibração futura) ---
+    # --- Corrente de fuga ---
     leakage_current: float = 0.0       # Iil
 
     # --- Resistência de saída ---
@@ -100,10 +100,12 @@ class DspState:
     ay: int = 0
     az: int = 0
 
-    # --- Timestamp do DSP ---
+    # --- Timestamp DSP e ETA ---
     dsp_timestamp: str = ""
+    eta: str = ""
 
-    # --- Diagnóstico do último megapayload ---
+    # --- Diagnóstico da última linha capturada ---
+    raw_journal_line: str = ""
     raw_payload_hex: str = ""
     raw_data_hex: str = ""
     raw_temperature_window_hex: str = ""
