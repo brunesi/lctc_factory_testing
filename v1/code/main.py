@@ -55,6 +55,28 @@ def _read_serial_number() -> str:
 
 
 # ------------------------------------------------------------------ #
+# Área gráfica                                                        #
+# ------------------------------------------------------------------ #
+
+def _create_display() -> pygame.Surface:
+    """
+    Cria a área gráfica do factory check.
+
+    Durante desenvolvimento/debug, usa uma janela normal 600x1024 para
+    evitar tomar a tela inteira. O modo quiosque/fullscreen fica reservado
+    para a versão final e pode ser reativado por config.FULLSCREEN=True.
+    """
+    size = (config.SCREEN_WIDTH, config.SCREEN_HEIGHT)
+
+    if config.FULLSCREEN:
+        # Modo quiosque/final. Manter desativado durante debug.
+        return pygame.display.set_mode(size, pygame.FULLSCREEN)
+
+    # Modo debug: janela normal no gerenciador gráfico.
+    return pygame.display.set_mode(size)
+
+
+# ------------------------------------------------------------------ #
 # Tela de erro fatal (DSP não respondeu)                             #
 # ------------------------------------------------------------------ #
 
@@ -231,16 +253,17 @@ def main() -> None:
 
     # --- Pygame ---
     pygame.init()
-    flags  = pygame.FULLSCREEN if config.FULLSCREEN else 0
-    screen = pygame.display.set_mode(
-        (config.SCREEN_WIDTH, config.SCREEN_HEIGHT), flags
-    )
+    screen = _create_display()
     pygame.display.set_caption("Factory Check")
-    pygame.mouse.set_visible(False)
+    pygame.mouse.set_visible(config.FULLSCREEN is False)
     clock  = pygame.time.Clock()
     F.init()   # carrega fontes após pygame.init()
 
-    log.info("Pygame inicializado.")
+    log.info(
+        f"Pygame inicializado em "
+        f"{'fullscreen/quiosque' if config.FULLSCREEN else 'janela debug'} "
+        f"{config.SCREEN_WIDTH}x{config.SCREEN_HEIGHT}."
+    )
 
     # --- Tela de boot ---
     _show_boot_screen(screen, clock, serial_number, event_queue)
