@@ -19,7 +19,10 @@ SERIAL_RFID = "/dev/ttyFTDI_RFID"
 SCREEN_WIDTH  = 600
 SCREEN_HEIGHT = 1024
 FPS           = 30
-FULLSCREEN    = True    # False para janela (desenvolvimento)
+
+# Modo atual de desenvolvimento/debug: janela normal 600x1024.
+# Para a versão final em quiosque, voltar para True.
+FULLSCREEN    = False
 
 # ------------------------------------------------------------------ #
 # Arquivo de número de série                                          #
