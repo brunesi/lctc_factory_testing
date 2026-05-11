@@ -18,6 +18,7 @@ Ordem dos campos:
 """
 
 import logging
+import re
 from datetime import datetime
 
 log = logging.getLogger(__name__)
@@ -26,6 +27,15 @@ FUNCTION_MEGAPAYLOAD = 0x04
 FRAME_FUNCTION_TOKEN = "04"
 FRAME_SIZE_TOKEN = "64"
 FRAME_TOKEN_COUNT = 35
+
+# Remove sequências ANSI/VT100 como \x1b[93m e \x1b[0m que podem vir do
+# journal quando a aplicação original colore a linha antes de registrar.
+ANSI_ESCAPE_RE = re.compile(r"\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])")
+
+
+def strip_ansi(text: str) -> str:
+    """Remove códigos ANSI/VT100 de cor/formatação."""
+    return ANSI_ESCAPE_RE.sub("", text)
 
 
 def _as_int(token: str, field: str) -> int:
@@ -76,7 +86,8 @@ def parse_journal_frame(line: str) -> dict | None:
     Retorna um dicionário compatível com os nomes consumidos por DspReader
     e DspState, ou None quando a linha não é um frame válido.
     """
-    raw_line = line.strip()
+    original_line = line.rstrip("\n")
+    raw_line = strip_ansi(original_line).strip()
     if not raw_line:
         return None
 
@@ -85,11 +96,16 @@ def parse_journal_frame(line: str) -> dict | None:
     if len(tokens) < FRAME_TOKEN_COUNT:
         log.warning(
             f"Frame 04 64 incompleto: recebido {len(tokens)} tokens, "
-            f"esperado pelo menos {FRAME_TOKEN_COUNT}. Linha: {raw_line!r}"
+            f"esperado pelo menos {FRAME_TOKEN_COUNT}. Linha limpa: {raw_line!r}; "
+            f"linha original: {original_line!r}"
         )
         return None
 
     if tokens[0] != FRAME_FUNCTION_TOKEN or tokens[1] != FRAME_SIZE_TOKEN:
+        log.debug(
+            f"Linha ignorada: tokens iniciais inválidos após limpeza ANSI: "
+            f"{tokens[:2]!r}; linha original: {original_line!r}"
+        )
         return None
 
     try:
@@ -125,7 +141,7 @@ def parse_journal_frame(line: str) -> dict | None:
         eta = tokens[34]
 
     except ValueError as exc:
-        log.warning(f"Falha ao decodificar frame 04 64: {exc}. Linha: {raw_line!r}")
+        log.warning(f"Falha ao decodificar frame 04 64: {exc}. Linha limpa: {raw_line!r}")
         return None
 
     return {
@@ -176,5 +192,6 @@ def parse_journal_frame(line: str) -> dict | None:
         "dsp_timestamp": dsp_timestamp,
         "eta": eta,
         "raw_journal_line": raw_line,
+        "raw_journal_line_original": original_line,
         "raw_tokens": tokens,
     }
