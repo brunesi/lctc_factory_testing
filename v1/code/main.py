@@ -87,9 +87,9 @@ def _show_fatal_dsp_error(screen: pygame.Surface,
             "DSP não respondeu dentro do tempo limite.",
             "",
             "Verifique:",
-            "  · Cabo USB entre LattePanda e DSP",
-            "  · Alimentação do DSP",
-            f"  · Porta serial: {config.SERIAL_PORT}",
+            "  · chargepoint.service ativo",
+            "  · journal emitindo linhas 04 64",
+            "  · comando: journalctl -u chargepoint.service --since '30 seconds ago' -o cat -f",
             "",
             "O check não pode prosseguir.",
             "Corrija o problema e reinicie o sistema.",
@@ -205,13 +205,11 @@ def main() -> None:
     dsp_state   = DspState()
     event_queue: queue.Queue = queue.Queue()
     dsp_reader  = DspReader(
-        port=config.SERIAL_PORT,
-        baud=config.SERIAL_BAUD,
         state=dsp_state,
         event_queue=event_queue,
     )
     dsp_reader.start()
-    log.info("DspReader iniciado.")
+    log.info("DspReader iniciado via journal.")
 
     # --- CheckResult ---
     check_result = CheckResult(serial_number=serial_number)
