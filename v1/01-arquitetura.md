@@ -8,7 +8,8 @@ Boot automático (systemd)
     ▼
 main.py
     ├── DspReader (thread daemon)
-    │     ├── Lê serial continuamente
+    │     ├── Lê o journal do chargepoint.service continuamente
+    │     ├── Filtra linhas contendo "04 64"
     │     ├── Atualiza DspState (com Lock)
     │     └── Detecta bordas nos botões → ButtonEvent na Queue
     │
@@ -24,18 +25,19 @@ main.py
 ## Modelo de concorrência
 
 ```
-Thread DspReader                    Thread principal (Pygame)
-──────────────────                  ──────────────────────────
-readline() da serial                drena event_queue
-parse_frame() → DspState            phase.update(dsp_state, events)
-  └─ com state.lock                   └─ state.snapshot() usa state.lock
-detecta borda botão                 renderer.render(screen, phase)
-  └─ event_queue.put(ButtonEvent)   pygame.display.flip()
+Thread DspReader                         Thread principal (Pygame)
+──────────────────                       ──────────────────────────
+journalctl -f                            drena event_queue
+filtra linhas "04 64"                    phase.update(dsp_state, events)
+parse_journal_frame() → DspState           └─ state.snapshot() usa state.lock
+  └─ com state.lock                       renderer.render(screen, phase)
+detecta borda botão                      pygame.display.flip()
+  └─ event_queue.put(ButtonEvent)
 ```
 
 - `DspState` protegido por `threading.Lock`
 - `queue.Queue` é thread-safe nativamente
-- `DspReader.send()` protegido por `_write_lock` para escritas concorrentes
+- `DspReader.send()` é placeholder temporário para comandos futuros
 
 ## Estrutura de arquivos
 
@@ -132,16 +134,13 @@ fn sz st cc        posix   V   I Im    e%        et Vb     En Fan T1 T2 T3 T4 T5
 
 ## Protocolo de comandos ao DSP
 
-```
-SOP(0x7e) | function | size_msb | size_lsb | data | checksum | EOP(0x7d)
-checksum = complemento de 2 de 8 bits sobre [function, size_msb, size_lsb, data]
-```
+Os métodos de comando ao DSP permanecem definidos como placeholders em `dsp/commands.py` e serão atualizados em etapa posterior.
 
-| Comando | function | data |
-|---|---|---|
-| Fechar contatora | 0x0C | `[0x01]` |
-| Abrir contatora | 0x0C | `[0x02]` |
-| fan_on / fan_off | TODO | TODO |
+| Comando | Status atual |
+|---|---|
+| Fechar contatora | placeholder |
+| Abrir contatora | placeholder |
+| fan_on / fan_off | placeholder |
 
 ## Layout de tela (600×1024)
 
