@@ -1,11 +1,12 @@
 from pathlib import Path
 
 # ------------------------------------------------------------------ #
-# Serial                                                              #
+# Entrada DSP via journal                                             #
 # ------------------------------------------------------------------ #
 
-SERIAL_PORT = "/dev/ttyFTDI_serialCODICO"   # DSP
-SERIAL_BAUD = 115200
+DSP_JOURNAL_SERVICE = "chargepoint.service"
+DSP_JOURNAL_SINCE   = "30 seconds ago"
+DSP_JOURNAL_PATTERN = "04 64"
 
 # Leitor RFID — não usado no factory check atual,
 # registrado aqui para referência futura
