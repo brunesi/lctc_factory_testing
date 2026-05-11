@@ -16,6 +16,7 @@ Responsabilidades:
   - Expor send() como placeholder temporário para comandos futuros
 """
 
+import os
 import queue
 import threading
 import logging
@@ -115,7 +116,7 @@ class DspReader(threading.Thread):
         logger.info(
             "DspReader iniciando leitura do journal: "
             + " ".join(JOURNAL_COMMAND)
-            + f" | grep {GREP_PATTERN!r}"
+            + f" | filtro Python {GREP_PATTERN!r}"
         )
 
         while not self._stop_event.is_set():
@@ -132,12 +133,21 @@ class DspReader(threading.Thread):
         logger.info("DspReader encerrado.")
 
     def _run_journal_loop(self) -> None:
+        env = os.environ.copy()
+        env.update({
+            "SYSTEMD_COLORS": "0",
+            "NO_COLOR": "1",
+            "TERM": "dumb",
+            "PAGER": "cat",
+        })
+
         with subprocess.Popen(
             JOURNAL_COMMAND,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             text=True,
             bufsize=1,
+            env=env,
         ) as proc:
             self._process = proc
 
@@ -152,8 +162,27 @@ class DspReader(threading.Thread):
 
                 decoded = parse_journal_frame(line)
                 if decoded:
+                    logger.debug(
+                        "Frame 04 64 decodificado: "
+                        f"st=0x{decoded['charge_state']:02X} "
+                        f"posix={decoded['posix']} "
+                        f"T={decoded['t1_dsp']},{decoded['t2_board']},"
+                        f"{decoded['t3_rack']},{decoded['t4_cable1']},"
+                        f"{decoded['t5_cable2']}"
+                    )
                     self._update_state(decoded)
                     self._detect_button_edges()
+                else:
+                    logger.warning(f"Linha 04 64 encontrada, mas não decodificada: {line!r}")
+
+            stderr = ""
+            if proc.stderr is not None:
+                try:
+                    stderr = proc.stderr.read().strip()
+                except Exception:
+                    stderr = ""
+            if stderr:
+                logger.warning(f"journalctl stderr: {stderr}")
 
             self._process = None
 
