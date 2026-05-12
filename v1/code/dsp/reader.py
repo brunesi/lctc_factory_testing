@@ -84,7 +84,12 @@ class DspReader(threading.Thread):
         self._stop_event = threading.Event()
         self._process: subprocess.Popen | None = None
 
-        # Estado anterior dos botões para detecção de borda
+        # Estado anterior dos botões para detecção de borda.
+        # Mapeamento físico validado na Fase 02:
+        #   buttons_raw[0] = B1
+        #   buttons_raw[1] = B2
+        #   buttons_raw[2] = B3
+        #   buttons_raw[3] = B4
         self._prev_buttons = "0000"
 
     # ---------------------------------------------------------------- #
@@ -244,16 +249,24 @@ class DspReader(threading.Thread):
         """
         Compara estado atual dos botões com o anterior.
         Publica ButtonEvent na fila para cada transição 0→1.
-        String "4321": índice 0=B4, 1=B3, 2=B2, 3=B1.
+
+        Mapeamento físico validado no teste de fábrica:
+          buttons_raw[0] = B1
+          buttons_raw[1] = B2
+          buttons_raw[2] = B3
+          buttons_raw[3] = B4
         """
         with self.state.lock:
             current = self.state.buttons_raw
 
         for i, (prev, curr) in enumerate(zip(self._prev_buttons, current)):
             if prev == "0" and curr == "1":
-                button_number = 4 - i   # índice 0→B4, 3→B1
+                button_number = i + 1   # índice 0→B1, 3→B4
                 event = ButtonEvent(button=button_number)
                 self.event_queue.put(event)
-                logger.debug(f"ButtonEvent: B{button_number} pressionado")
+                logger.debug(
+                    f"ButtonEvent: B{button_number} pressionado "
+                    f"(buttons_raw={current})"
+                )
 
         self._prev_buttons = current
