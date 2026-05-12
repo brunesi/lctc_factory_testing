@@ -35,7 +35,7 @@ class DspState:
       16  T4         — temperatura cabo CCS 1
       17  T5         — temperatura cabo CCS 2
       18  PB         — ignorado
-      19  4321       — pushbuttons individuais; índice 0=B4, índice 3=B1
+      19  4321       — pushbuttons individuais; índice 0=B1, índice 3=B4
       20  em         — botoeira de emergência: 0=off, 1=on
       21  Iil        — corrente de fuga
       22  Rno        — resistência normalizada de saída
@@ -80,7 +80,7 @@ class DspState:
     t4_cable1: int = 0
     t5_cable2: int = 0
 
-    # --- Botões (string '0000'; índice 0=B4, índice 3=B1) ---
+    # --- Botões (string '0000'; índice 0=B1, índice 3=B4) ---
     buttons_raw: str = "0000"
 
     # --- Botoeira de emergência ---
@@ -121,21 +121,23 @@ class DspState:
 
     @property
     def button1(self) -> bool:
-        """B1 = caractere de índice 3 em buttons_raw."""
-        return self.buttons_raw[3] == "1"
+        """B1 = caractere de índice 0 em buttons_raw."""
+        return self.buttons_raw[0] == "1"
 
     @property
     def button2(self) -> bool:
-        return self.buttons_raw[2] == "1"
-
-    @property
-    def button3(self) -> bool:
+        """B2 = caractere de índice 1 em buttons_raw."""
         return self.buttons_raw[1] == "1"
 
     @property
+    def button3(self) -> bool:
+        """B3 = caractere de índice 2 em buttons_raw."""
+        return self.buttons_raw[2] == "1"
+
+    @property
     def button4(self) -> bool:
-        """B4 = caractere de índice 0 em buttons_raw."""
-        return self.buttons_raw[0] == "1"
+        """B4 = caractere de índice 3 em buttons_raw."""
+        return self.buttons_raw[3] == "1"
 
     @property
     def door_open(self) -> bool:
