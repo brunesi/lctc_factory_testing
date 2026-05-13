@@ -5,11 +5,11 @@ Comandos para o módulo executor do carregador via arquivos DSV.
 
 Interface mínima inicial:
 
-  commands.dsv
+  /tmp/factory_check/commands.dsv
       escrito pelo factory check
       formato: datetime; descrição; código
 
-  commands_response.dsv
+  /tmp/factory_check/commands_response.dsv
       escrito pelo módulo executor como ACK
       nesta etapa o factory check apenas registra em log se o ACK apareceu
 
@@ -39,6 +39,17 @@ def _timestamp() -> str:
     return datetime.now().isoformat(timespec="milliseconds")
 
 
+def _ensure_command_dir() -> bool:
+    """Garante que /tmp/factory_check exista antes de usar os arquivos DSV."""
+    command_dir = Path(config.COMMAND_DIR)
+    try:
+        command_dir.mkdir(parents=True, exist_ok=True)
+        return True
+    except OSError as exc:
+        logger.error(f"Falha ao criar diretório de comandos {command_dir}: {exc}")
+        return False
+
+
 def _write_command(description: str, code: int) -> bool:
     """
     Escreve o comando no arquivo commands.dsv.
@@ -46,6 +57,9 @@ def _write_command(description: str, code: int) -> bool:
     Usa escrita atômica via arquivo temporário + replace(), para reduzir o
     risco de o módulo executor ler uma linha parcialmente escrita.
     """
+    if not _ensure_command_dir():
+        return False
+
     command_path = Path(config.COMMAND_FILE)
     response_path = Path(config.COMMAND_RESPONSE_FILE)
     tmp_path = command_path.with_suffix(command_path.suffix + ".tmp")
