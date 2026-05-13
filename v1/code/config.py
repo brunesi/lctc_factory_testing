@@ -13,6 +13,21 @@ DSP_JOURNAL_PATTERN = "04 64"
 SERIAL_RFID = "/dev/ttyFTDI_RFID"
 
 # ------------------------------------------------------------------ #
+# Comandos para o módulo executor                                     #
+# ------------------------------------------------------------------ #
+
+# Interface mínima por arquivo DSV:
+#   commands.dsv          -> escrito pelo factory check
+#   commands_response.dsv -> escrito pelo módulo executor como ACK
+#
+# Formato do commands.dsv:
+#   datetime; descrição; código
+COMMAND_FILE = "commands.dsv"
+COMMAND_RESPONSE_FILE = "commands_response.dsv"
+COMMAND_ACK_TIMEOUT_S = 2.0
+COMMAND_ACK_POLL_S    = 0.1
+
+# ------------------------------------------------------------------ #
 # Display                                                             #
 # ------------------------------------------------------------------ #
 
